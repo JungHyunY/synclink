@@ -1,0 +1,23 @@
+{
+  "name": "synclink",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "JayYoon",
+  "license": "ISC",
+  "description": "remote access control App",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JungHyunY/syncLink.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JungHyunY/syncLink/issues"
+  },
+  "homepage": "https://github.com/JungHyunY/syncLink#readme",
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}
