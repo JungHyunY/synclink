@@ -138,6 +138,35 @@ async fn start_screen_capture(window: Window, monitor_index: usize) {
     });
 }
 
+#[command]
+fn check_permissions() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        // 접근성 권한(마우스 제어)이 있는지 확인
+        return macos_accessibility_client::accessibility::application_is_trusted();
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // 윈도우는 별도 체크 없이 true 반환 (MVP 기준)
+        return true;
+    }
+}
+
+// [NEW] 설정창 열기 로직
+#[command]
+fn open_permission_settings() {
+    #[cfg(target_os = "macos")]
+    {
+        // '손쉬운 사용' 설정 패널을 직접 엽니다.
+        std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+            .spawn()
+            .ok();
+            
+        // (참고) 화면 기록 설정창 URL: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|_app| { Ok(()) })
@@ -145,7 +174,9 @@ fn main() {
             remote_mouse_move, 
             remote_mouse_click,
             remote_keyboard_event,
-            start_screen_capture
+            start_screen_capture,
+            check_permissions,
+            open_permission_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

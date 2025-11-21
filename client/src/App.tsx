@@ -15,7 +15,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(false); 
   const [ghostCursor, setGhostCursor] = useState({ x: 0.5, y: 0.5 });
   const [monitorIndex, setMonitorIndex] = useState(0);
-
+  const [permissionGranted, setPermissionGranted] = useState(true);
   // [핵심] 리스너 내부에서 최신 값을 읽기 위한 Ref 추가
   const activeMonitorRef = useRef(0);
 
@@ -32,6 +32,23 @@ function App() {
       setMonitorIndex(index);
       activeMonitorRef.current = index;
   };
+
+  useEffect(() => {
+    // 앱 시작 시 권한 체크
+    const check = async () => {
+        const granted = await invoke<boolean>("check_permissions");
+        setPermissionGranted(granted);
+        
+        if (!granted) {
+            console.warn("⚠️ Mac permissions missing!");
+        }
+    };
+    check();
+    
+    // (선택사항) 사용자가 설정을 켜고 돌아왔을 때를 대비해 2초마다 체크할 수도 있음
+    const interval = setInterval(check, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     socketRef.current = io(SIGNALING_SERVER_URL);
@@ -242,6 +259,25 @@ function App() {
 
   return (
     <div className="container">
+      {!permissionGranted && (
+        <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0,
+            background: '#ef4444', color: 'white', padding: '12px',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px',
+            zIndex: 9999
+        }}>
+            <span>⚠️ 원격 제어를 위해 '손쉬운 사용' 권한이 필요합니다.</span>
+            <button 
+                onClick={() => invoke("open_permission_settings")}
+                style={{
+                    padding: '6px 12px', borderRadius: '4px', border: 'none', 
+                    background: 'white', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer'
+                }}
+            >
+                설정 열기 ⚙️
+            </button>
+        </div>
+      )}
       <canvas ref={captureCanvasRef} style={{ position: 'absolute', top: -9999, left: -9999, visibility: 'hidden' }} />
       
       {!isConnected ? (
