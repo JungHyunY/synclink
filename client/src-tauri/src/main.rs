@@ -2,7 +2,7 @@
 
 use rdev::{simulate, Button, EventType, Key};
 use tauri::{command, Emitter, Manager, Window};
-use screenshots::Screen;
+use screenshots::Screen; 
 use std::io::Cursor;
 use base64::{engine::general_purpose, Engine as _};
 use std::thread;
@@ -10,10 +10,9 @@ use std::time::Duration;
 use image::ColorType;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-// 전역 캡처 세션 ID (스레드 충돌 방지용)
 static CAPTURE_SESSION_ID: AtomicUsize = AtomicUsize::new(0);
 
-// --- 키보드 매핑 (기존 동일) ---
+// --- 키보드 매핑 ---
 fn str_to_key(key_str: &str) -> Option<Key> {
     match key_str.to_lowercase().as_str() {
         "enter" => Some(Key::Return),
@@ -45,22 +44,21 @@ fn str_to_key(key_str: &str) -> Option<Key> {
     }
 }
 
-// [최종] 마우스 이동: 모니터 인덱스를 받아 해당 화면 기준 좌표로 변환
+// [수정됨] 괄호 () 제거
 #[command]
 fn remote_mouse_move(x: f64, y: f64, monitor_index: usize) {
     let screens = Screen::all().unwrap_or_default();
-    // 요청한 인덱스가 없으면 0번(Primary) 사용
     let screen = screens.get(monitor_index).or(screens.first());
 
     if let Some(s) = screen {
         let info = s.display_info;
-        // 모니터의 시작점(Offset)과 크기(Width/Height)를 가져옴
-        let offset_x = info.x() as f64;
-        let offset_y = info.y() as f64;
-        let width = info.width() as f64;
-        let height = info.height() as f64;
+        
+        // [핵심 수정] info.x() -> info.x (필드 접근)
+        let offset_x = info.x as f64;
+        let offset_y = info.y as f64;
+        let width = info.width as f64;
+        let height = info.height as f64;
 
-        // 비율(0.0~1.0)을 절대 좌표로 변환하고 모니터 오프셋을 더함
         let target_x = offset_x + (x * width);
         let target_y = offset_y + (y * height);
 
@@ -80,9 +78,6 @@ fn remote_mouse_click(button: String) {
 
 #[command]
 fn remote_keyboard_event(state: String, key: String) {
-    // 디버깅용 로그
-    println!("⌨️ Key: {} ({})", key, state);
-    
     if let Some(rdev_key) = str_to_key(&key) {
         let event = match state.as_str() {
             "down" => EventType::KeyPress(rdev_key),
@@ -93,19 +88,16 @@ fn remote_keyboard_event(state: String, key: String) {
     }
 }
 
-// [최종] 화면 캡처: AtomicUsize로 스레드 제어 + Raw Image Encoding
 #[command]
 async fn start_screen_capture(window: Window, monitor_index: usize) {
-    // 1. 새로운 세션 ID 발급 (이전 스레드들을 무효화)
     let my_session_id = CAPTURE_SESSION_ID.fetch_add(1, Ordering::SeqCst) + 1;
-    println!("📸 Starting capture for Monitor {} (Session {})", monitor_index, my_session_id);
+    println!("📸 Starting capture (screenshots) for Monitor {} (Session {})", monitor_index, my_session_id);
 
     thread::spawn(move || {
         loop {
-            // 2. 생존 확인: 전역 ID가 내 ID와 다르면 종료
             let current_global_id = CAPTURE_SESSION_ID.load(Ordering::SeqCst);
             if current_global_id != my_session_id {
-                println!("🛑 Thread {} stopping (New: {})", my_session_id, current_global_id);
+                println!("🛑 Thread {} stopping...", my_session_id);
                 break;
             }
 
@@ -116,21 +108,19 @@ async fn start_screen_capture(window: Window, monitor_index: usize) {
             if let Some(screen) = screen {
                 match screen.capture() {
                     Ok(image) => {
-                        // 3. 이미지 처리 (Raw Data -> JPEG)
+                        // capture()가 반환하는 image는 메서드 width(), height()를 가집니다 (여긴 괄호 유지)
                         let width = image.width();
                         let height = image.height();
-                        let raw_data = image.as_raw();
+                        let raw_data = image.as_raw(); // Vec<u8>
 
                         let mut buffer = Cursor::new(Vec::new());
-                        // 품질 50 (속도/화질 타협점)
                         let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buffer, 50);
                         
-                        // Raw Data 인코딩으로 버전 이슈 회피
                         match encoder.encode(raw_data, width, height, ColorType::Rgba8) {
                             Ok(_) => {
                                 let b64 = general_purpose::STANDARD.encode(buffer.get_ref());
                                 if let Err(_) = window.emit("video-frame", b64) {
-                                    break; // 창 닫힘
+                                    break;
                                 }
                             },
                             Err(e) => println!("Encoding error: {}", e),
@@ -140,7 +130,6 @@ async fn start_screen_capture(window: Window, monitor_index: usize) {
                 }
             }
 
-            // 4. FPS 제어 (약 30 FPS)
             let elapsed = start_time.elapsed();
             if elapsed < Duration::from_millis(33) {
                 thread::sleep(Duration::from_millis(33) - elapsed);
