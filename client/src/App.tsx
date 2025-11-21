@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Monitor, Cast, Power, Hash, MousePointer2 } from "lucide-react"; 
 import "./App.css";
 
-const SIGNALING_SERVER_URL = "http://localhost:3001"; 
+const SIGNALING_SERVER_URL = "http://183.111.166.141:3001"; 
 const ICE_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 function App() {
