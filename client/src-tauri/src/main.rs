@@ -2,7 +2,7 @@
 
 use rdev::{simulate, Button, EventType, Key};
 use tauri::{command, Emitter, Manager, Window};
-use xcap::Monitor;
+use screenshots::Screen;
 use std::io::Cursor;
 use base64::{engine::general_purpose, Engine as _};
 use std::thread;
@@ -48,16 +48,17 @@ fn str_to_key(key_str: &str) -> Option<Key> {
 // [최종] 마우스 이동: 모니터 인덱스를 받아 해당 화면 기준 좌표로 변환
 #[command]
 fn remote_mouse_move(x: f64, y: f64, monitor_index: usize) {
-    let monitors = Monitor::all().unwrap_or_default();
+    let screens = Screen::all().unwrap_or_default();
     // 요청한 인덱스가 없으면 0번(Primary) 사용
-    let monitor = monitors.get(monitor_index).or(monitors.first());
+    let screen = screens.get(monitor_index).or(screens.first());
 
-    if let Some(m) = monitor {
+    if let Some(s) = screen {
+        let info = s.display_info;
         // 모니터의 시작점(Offset)과 크기(Width/Height)를 가져옴
-        let offset_x = m.x() as f64;
-        let offset_y = m.y() as f64;
-        let width = m.width() as f64;
-        let height = m.height() as f64;
+        let offset_x = info.x() as f64;
+        let offset_y = info.y() as f64;
+        let width = info.width() as f64;
+        let height = info.height() as f64;
 
         // 비율(0.0~1.0)을 절대 좌표로 변환하고 모니터 오프셋을 더함
         let target_x = offset_x + (x * width);
@@ -109,11 +110,11 @@ async fn start_screen_capture(window: Window, monitor_index: usize) {
             }
 
             let start_time = std::time::Instant::now();
-            let monitors = Monitor::all().unwrap_or_default();
-            let monitor = monitors.get(monitor_index).or(monitors.first());
+            let screens = Screen::all().unwrap_or_default();
+            let screen = screens.get(monitor_index).or(screens.first());
 
-            if let Some(monitor) = monitor {
-                match monitor.capture_image() {
+            if let Some(screen) = screen {
+                match screen.capture() {
                     Ok(image) => {
                         // 3. 이미지 처리 (Raw Data -> JPEG)
                         let width = image.width();
