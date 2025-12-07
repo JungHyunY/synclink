@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Monitor, Cast, Power, Hash, MousePointer2 } from "lucide-react"; 
+import { Monitor, Cast, Power, Hash } from "lucide-react"; 
 import "./App.css";
 
 const SIGNALING_SERVER_URL = "http://183.111.166.141:3001"; 
@@ -21,7 +21,7 @@ function App() {
 
   const socketRef = useRef<Socket | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  //const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const captureCanvasRef = useRef<HTMLCanvasElement>(null);
   const isHostRef = useRef(false);
