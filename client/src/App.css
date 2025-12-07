@@ -134,3 +134,10 @@ video {
   /* CSS Transition으로 좌표 보간 (뚝뚝 끊김 방지) */
   transition: left 0.1s linear, top 0.1s linear; 
 }
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}

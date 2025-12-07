@@ -194,19 +194,27 @@ function App() {
     setIsHostMode(true);
     setIsConnected(true);
     setStatus("Hosting...");
+    
     socketRef.current?.emit("join-room", roomId);
 
     try {
-      // Ref 값 사용
-      await invoke("start_screen_capture", { monitorIndex: Number(activeMonitorRef.current) });
+      await invoke("start_screen_capture", { monitorIndex: Number(monitorIndex) });
 
+      // [삭제] 로컬 비디오 미리보기 연결 코드 제거
+      // if (!captureCanvasRef.current) return;
+      // const canvas = captureCanvasRef.current as any;
+      // const stream = canvas.captureStream(30); 
+      // if (localVideoRef.current) localVideoRef.current.srcObject = stream; <--- 삭제
+
+      // WebRTC 연결 준비
       if (!captureCanvasRef.current) return;
       const canvas = captureCanvasRef.current as any;
-      const stream = canvas.captureStream(30); 
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      const stream = canvas.captureStream(30);
+      
       const peer = createPeerConnection("unknown"); 
       stream.getTracks().forEach((track: any) => peer.addTrack(track, stream));
       peerRef.current = peer; 
+
     } catch (err) { 
         console.error(err);
         setIsHostMode(false);
@@ -318,14 +326,46 @@ function App() {
           </div>
 
           <div className="video-container">
+            {/* [Host View] 비디오 대신 상태 대시보드 표시 */}
             {isHostMode && (
-                <div className="video-wrapper">
-                    <video ref={localVideoRef} autoPlay playsInline muted />
-                    <div className="ghost-cursor" style={{ left: `${ghostCursor.x * 100}%`, top: `${ghostCursor.y * 100}%` }}>
-                        <MousePointer2 size={16} color="#ef4444" />
+                <div className="host-dashboard" style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
+                    color: 'white', userSelect: 'none'
+                }}>
+                    {/* 레이더 애니메이션 효과 */}
+                    <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{
+                            position: 'absolute', width: '100%', height: '100%', borderRadius: '50%',
+                            background: 'rgba(59, 130, 246, 0.3)', animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite'
+                        }}></div>
+                        <div style={{
+                            position: 'absolute', width: '60%', height: '60%', borderRadius: '50%',
+                            background: '#3b82f6', boxShadow: '0 0 20px #3b82f6'
+                        }}></div>
+                        <Cast size={32} color="white" style={{ zIndex: 10, position: 'relative' }} />
+                    </div>
+
+                    <div style={{ textAlign: 'center' }}>
+                        <h2 style={{ margin: '0 0 10px 0', fontSize: '1.8rem' }}>ON AIR</h2>
+                        <p style={{ color: '#94a3b8', margin: 0 }}>
+                            Display {Number(monitorIndex) + 1} is being shared.
+                        </p>
+                        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '5px' }}>
+                            Room ID: <span style={{ color: '#f8fafc', fontWeight: 'bold' }}>{roomId}</span>
+                        </p>
+                    </div>
+
+                    {/* 유령 커서 정보 (디버깅용으로 좌표만 표시하거나 숨김) */}
+                    <div style={{ 
+                        background: 'rgba(0,0,0,0.5)', padding: '10px 20px', borderRadius: '8px', 
+                        border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem', color: '#64748b'
+                    }}>
+                        Guest Mouse: {ghostCursor.x.toFixed(2)}, {ghostCursor.y.toFixed(2)}
                     </div>
                 </div>
             )}
+
+            {/* [Guest View] 기존과 동일 (화면 봄) */}
             {!isHostMode && (
                 <div className="video-wrapper" tabIndex={0} onKeyDown={(e) => handleKeyInput(e, 'keydown')} onKeyUp={(e) => handleKeyInput(e, 'keyup')}>
                     <video ref={remoteVideoRef} autoPlay playsInline muted onClick={(e) => handleRemoteInput(e, 'click')} onMouseMove={(e) => handleRemoteInput(e, 'mousemove')} />

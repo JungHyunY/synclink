@@ -72,8 +72,17 @@ fn remote_mouse_click(button: String) {
         "right" => Button::Right,
         _ => Button::Left,
     };
+    
+    // 1. 누른다
     let _ = simulate(&EventType::ButtonPress(btn));
+    
+    // 2. [핵심] 0.1초 기다린다 (OS가 인식할 시간을 줌)
+    thread::sleep(Duration::from_millis(100));
+    
+    // 3. 뗀다
     let _ = simulate(&EventType::ButtonRelease(btn));
+    
+    println!("🖱️ Click simulated: {}", button);
 }
 
 #[command]
